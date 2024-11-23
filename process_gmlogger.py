@@ -108,6 +108,25 @@ def load_into_chromadb(files):
             cuda_device = torch.cuda.get_device_name(0)
             print(f"CUDA capable GPU detected: {cuda_device}")
             print(f"CUDA version: {torch.version.cuda}")
+            
+            # Check specific libraries
+            cuda_libs = {
+                "libcudnn_adv.so.9": "cuDNN Advanced",
+                "libnvinfer.so.10": "TensorRT"
+            }
+            
+            missing_libs = []
+            for lib, name in cuda_libs.items():
+                if not check_cuda_library(lib):
+                    missing_libs.append(f"{name} ({lib})")
+            
+            if missing_libs:
+                print("\nWarning: The following CUDA libraries are missing:")
+                for lib in missing_libs:
+                    print(f"  - {lib}")
+                print("\nFalling back to CPU only mode")
+                return ['CPUExecutionProvider']
+            
             providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         else:
             print("CUDA is not available - Using CPU only")
@@ -125,12 +144,6 @@ def load_into_chromadb(files):
         print("3. Missing or incorrect NVIDIA driver installation")
         print("\nFalling back to CPU only mode")
         return ['CPUExecutionProvider']
-            
-            # Check specific libraries
-            cuda_libs = {
-                "libcudnn_adv.so.9": "cuDNN Advanced",
-                "libnvinfer.so.10": "TensorRT"
-            }
             
             missing_libs = []
             for lib, name in cuda_libs.items():

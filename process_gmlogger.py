@@ -2,6 +2,7 @@ import os
 import zipfile
 import tarfile
 import chromadb
+import torch
 from pathlib import Path
 import subprocess
 import shutil
@@ -58,10 +59,23 @@ def process_dlt_files(base_path):
 
 def load_into_chromadb(files):
     """Load converted files into ChromaDB"""
-    # Initialize ChromaDB with default embeddings
-    client = chromadb.Client()
+    # Initialize ChromaDB with CUDA-enabled settings if available
+    settings = chromadb.Settings(
+        anonymized_telemetry=False,
+        allow_reset=True,
+        is_persistent=False
+    )
+    
+    if torch.cuda.is_available():
+        print("CUDA is available - using GPU acceleration")
+        settings.chroma_db_impl = "duckdb+parquet"
+        settings.persist_directory = None
+    else:
+        print("CUDA not available - falling back to CPU")
+    
+    client = chromadb.Client(settings)
     collection = client.create_collection(
-        name="gmlogger_data"
+        name="gmlogger_data",
     )
     
     print("Loading files into ChromaDB...")

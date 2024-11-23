@@ -3,6 +3,7 @@ import zipfile
 import tarfile
 import chromadb
 import torch
+import logging
 from pathlib import Path
 import subprocess
 import shutil
@@ -69,11 +70,25 @@ def load_into_chromadb(files):
         persist_directory="./chroma_db"
     )
     
-    if torch.cuda.is_available():
-        print("CUDA is available - using GPU acceleration")
-        settings.chroma_db_impl = "duckdb+parquet"
-    else:
-        print("CUDA not available - falling back to CPU")
+    # Setup more robust CUDA detection
+    cuda_available = False
+    try:
+        if torch.cuda.is_available():
+            # Test CUDA initialization
+            torch.cuda.init()
+            device_count = torch.cuda.device_count()
+            if device_count > 0:
+                cuda_available = True
+                device_name = torch.cuda.get_device_name(0)
+                print(f"CUDA is available - using GPU acceleration")
+                print(f"Found {device_count} CUDA device(s): {device_name}")
+                settings.chroma_db_impl = "duckdb+parquet"
+    except Exception as e:
+        print(f"CUDA initialization error: {str(e)}")
+        
+    if not cuda_available:
+        print("CUDA not available or initialization failed - falling back to CPU")
+        settings.chroma_db_impl = "duckdb"  # Explicit CPU implementation
     
     client = chromadb.Client(settings)
     

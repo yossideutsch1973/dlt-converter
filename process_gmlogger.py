@@ -130,16 +130,38 @@ def load_into_chromadb(files):
         )
     )
 
+    # Configure ONNX Runtime session options
+    session_options = ort.SessionOptions()
+    session_options.log_severity_level = 3  # Reduce logging noise
+    
     # Configure embedding function with CPU-safe settings
     try:
+        # Initialize with explicit provider order
+        ort_providers = []
+        if 'CUDAExecutionProvider' in providers:
+            ort_providers.extend(['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        else:
+            ort_providers.append('CPUExecutionProvider')
+            
+        # Set environment variable to suppress CUDA initialization warnings
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        
         embedding_function = embedding_functions.DefaultEmbeddingFunction()
+        
         # Test the embedding function
         test_result = embedding_function(["test"])
-        print("Embedding function initialized successfully")
+        print("Embedding function initialized successfully using providers:", ort_providers)
+        
     except Exception as e:
-        print(f"Error initializing embedding function: {e}")
-        print("Please ensure all required dependencies are installed:")
-        print("pip install -U onnxruntime torch transformers")
+        print(f"\nError initializing embedding function: {e}")
+        print("\nTroubleshooting steps:")
+        print("1. Ensure all required dependencies are installed:")
+        print("   pip install -U onnxruntime torch transformers")
+        print("2. For GPU support, install CUDA dependencies:")
+        print("   - CUDA 12.x")
+        print("   - cuDNN 9.x")
+        print("   - TensorRT")
+        print("3. Check process_gmlogger.sh for detailed installation instructions")
         raise
     
     # Delete existing collection if it exists

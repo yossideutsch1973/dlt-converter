@@ -116,13 +116,16 @@ else
     fi
 fi
 
-# Set CUDA device before Python starts
+# Set CUDA environment before Python starts
 if nvidia-smi &> /dev/null; then
-    export CUDA_VISIBLE_DEVICES=0
-    # Force PyTorch to reinitialize CUDA
+    # Get the first available GPU
+    GPU_ID=$(nvidia-smi --query-gpu=index --format=csv,noheader | head -n1)
+    export CUDA_VISIBLE_DEVICES=$GPU_ID
     export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+    # Pre-allocate GPU memory
+    export CUDA_LAUNCH_BLOCKING=1
 else
-    export CUDA_VISIBLE_DEVICES=""
+    export CUDA_VISIBLE_DEVICES="-1"
 fi
 
 # Run the Python script

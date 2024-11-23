@@ -55,11 +55,12 @@ def process_dlt_files(base_path):
             ])
     
     if dlt_files:
-        print(f"Converting {len(dlt_files)} DLT files...")
-        for dlt_path, file in tqdm(dlt_files, desc="Converting", leave=False):
+        for dlt_path, file in tqdm(dlt_files, desc="Converting DLT files", leave=False, position=0):
             output_file = dlt_path + '.txt'
             if convert_dlt_file(dlt_path, output_file):
                 converted_files.append(output_file)
+            else:
+                tqdm.write(f"Failed to convert: {file}")
     return converted_files
 
 def load_into_chromadb(files):
@@ -69,7 +70,10 @@ def load_into_chromadb(files):
     MAX_RETRIES = 3   # Number of retries for failed batches
     
     # Setup environment and providers
-    providers = ['CPUExecutionProvider']  # Start with CPU as default
+    providers = []
+    
+    # Disable CUDA warnings
+    logging.getLogger("torch.cuda").setLevel(logging.ERROR)
     
     def check_cuda_library(lib_name):
         """Check for CUDA library in common locations"""
@@ -95,16 +99,9 @@ def load_into_chromadb(files):
             return False
 
     try:
-        # Get CUDA environment state before initialization
-        cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', 'not set')
-        print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}")
-        
-        # Try to initialize CUDA with error capture
-        try:
+        # Try to initialize CUDA silently
+        if torch.cuda.is_available():
             torch.cuda.init()
-        except RuntimeError as cuda_init_error:
-            print(f"CUDA initialization warning: {cuda_init_error}")
-            print("Attempting to continue with initialization...")
         
         # Verify CUDA availability after initialization attempt
         if torch.cuda.is_available() and torch.cuda.device_count() > 0:

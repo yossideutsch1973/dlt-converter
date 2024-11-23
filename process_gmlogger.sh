@@ -32,10 +32,14 @@ python3 -m pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --inde
 python3 -m pip install onnxruntime-gpu==1.16.3
 python3 -m pip install -U transformers chromadb tqdm
 
+# Unset CUDA_VISIBLE_DEVICES to ensure clean state
+unset CUDA_VISIBLE_DEVICES
+
 # Check CUDA and related dependencies
 echo "Checking CUDA dependencies..."
 
-# Check for NVIDIA driver
+# Check NVIDIA driver and CUDA capabilities
+echo "Checking NVIDIA driver..."
 if ! command -v nvidia-smi &> /dev/null; then
     echo "Warning: NVIDIA driver not found. GPU support will not be available."
     echo "To enable GPU support, install NVIDIA drivers first."
@@ -100,9 +104,20 @@ else
             echo "or visit NVIDIA website for installation instructions."
         else
             echo "All required CUDA libraries found."
+            
+            # Test CUDA availability with Python
+            echo "Testing CUDA with PyTorch..."
+            if ! python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA not available'; print(f'CUDA OK - Device: {torch.cuda.get_device_name(0)}')"; then
+                echo "Warning: PyTorch cannot access CUDA. Will fall back to CPU mode."
+                echo "Try running: nvidia-smi"
+                echo "If that works but CUDA is still not available, your CUDA/PyTorch installation might need repair."
+            fi
         fi
     fi
 fi
+
+# Export clean CUDA environment
+export CUDA_VISIBLE_DEVICES=0
 
 # Run the Python script
 python3 process_gmlogger.py "$GMLOGGER_FILE"

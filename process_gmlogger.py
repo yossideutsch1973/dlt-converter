@@ -58,15 +58,10 @@ def process_dlt_files(base_path):
 
 def load_into_chromadb(files):
     """Load converted files into ChromaDB"""
-    # Initialize ChromaDB with GPU-enabled embeddings
-    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-        api_key="",  # Leave empty to use local GPU
-        model_name="all-MiniLM-L6-v2"
-    )
+    # Initialize ChromaDB with default embeddings
     client = chromadb.Client()
     collection = client.create_collection(
-        name="gmlogger_data",
-        embedding_function=openai_ef
+        name="gmlogger_data"
     )
     
     print("Loading files into ChromaDB...")

@@ -25,5 +25,14 @@ echo "Checking Python dependencies..."
 python3 -m pip install -U pip
 python3 -m pip install -U onnxruntime torch transformers chromadb tqdm
 
+# Check for CUDA dependencies
+echo "Checking CUDA dependencies..."
+if ! ldconfig -p | grep -q "libcudnn_adv.so.9\|libnvinfer.so.10"; then
+    echo "Warning: Some CUDA libraries are missing. The script will run in CPU-only mode."
+    echo "To enable GPU support, install:"
+    echo "  - libcudnn8"
+    echo "  - tensorrt"
+fi
+
 # Run the Python script
 python3 process_gmlogger.py "$GMLOGGER_FILE"

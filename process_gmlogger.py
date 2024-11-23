@@ -72,21 +72,29 @@ def load_into_chromadb(files):
     providers = ['CPUExecutionProvider']  # Start with CPU as default
     
     try:
-        # Check CUDA availability without initializing
+        # Check CUDA availability and required libraries
         if torch.cuda.is_available():
-            cuda_device = torch.cuda.get_device_name(0)
-            print(f"CUDA capable GPU detected: {cuda_device}")
-            
-            # Test CUDA initialization
-            torch.cuda.init()
-            torch.cuda.set_device(0)
-            
-            # Only add CUDA provider if initialization successful
-            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-            print("CUDA initialization successful - GPU will be used if possible")
+            try:
+                # Try importing required CUDA libraries
+                import ctypes
+                ctypes.CDLL("libcudnn_adv.so.9")
+                ctypes.CDLL("libnvinfer.so.10")
+                
+                cuda_device = torch.cuda.get_device_name(0)
+                print(f"CUDA capable GPU detected: {cuda_device}")
+                
+                # Test CUDA initialization
+                torch.cuda.init()
+                torch.cuda.set_device(0)
+                
+                # Only add CUDA provider if initialization successful
+                providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+                print("CUDA initialization successful - GPU will be used")
+            except Exception as cuda_err:
+                print(f"Warning: Required CUDA libraries not found: {cuda_err}")
+                print("Falling back to CPU only mode")
         else:
             print("No CUDA capable GPU detected - Using CPU only")
-            
     except Exception as e:
         print(f"Warning: GPU initialization failed: {e}")
         print("Continuing with CPU only mode")

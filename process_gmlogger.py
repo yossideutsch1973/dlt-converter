@@ -1,23 +1,28 @@
 import os
 import zipfile
+import tarfile
 import chromadb
 from pathlib import Path
 import subprocess
 import shutil
 import tempfile
 
-def extract_nested_zips(zip_path, extract_path):
-    """Recursively extract nested zip files"""
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_path)
+def extract_nested_archives(archive_path, extract_path):
+    """Recursively extract nested archives (zip and tar.gz)"""
+    if archive_path.endswith('.tar.gz'):
+        with tarfile.open(archive_path, 'r:gz') as tar_ref:
+            tar_ref.extractall(extract_path)
+    elif archive_path.endswith('.zip'):
+        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_path)
     
-    # Look for more zip files in extracted content
+    # Look for more archives in extracted content
     for root, _, files in os.walk(extract_path):
         for file in files:
-            if file.endswith('.zip'):
-                nested_zip = os.path.join(root, file)
+            if file.endswith(('.zip', '.tar.gz')):
+                nested_archive = os.path.join(root, file)
                 nested_extract_path = os.path.join(root, Path(file).stem)
-                extract_nested_zips(nested_zip, nested_extract_path)
+                extract_nested_archives(nested_archive, nested_extract_path)
 
 def convert_dlt_file(dlt_file, output_file):
     """Convert DLT file to text format using dlt-convert"""
@@ -59,11 +64,11 @@ def load_into_chromadb(files):
                     ids=[f"{Path(file).stem}_chunk_{i}"]
                 )
 
-def main(gmlogger_zip):
+def main(gmlogger_archive):
     # Create temporary directory for extraction
     with tempfile.TemporaryDirectory() as temp_dir:
-        print(f"Extracting {gmlogger_zip}...")
-        extract_nested_zips(gmlogger_zip, temp_dir)
+        print(f"Extracting {gmlogger_archive}...")
+        extract_nested_archives(gmlogger_archive, temp_dir)
         
         print("Processing DLT files...")
         converted_files = process_dlt_files(temp_dir)

@@ -2,13 +2,19 @@
 
 # Check if input file provided
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <gmlogger_zip_file>"
+    echo "Usage: $0 <gmlogger_archive_file>"
     exit 1
 fi
 
 # Check if file exists
 if [ ! -f "$1" ]; then
     echo "Error: File $1 does not exist"
+    exit 1
+fi
+
+# Check if file is a supported format
+if [[ ! "$1" =~ \.(zip|tar\.gz)$ ]]; then
+    echo "Error: File must be a .zip or .tar.gz archive"
     exit 1
 fi
 

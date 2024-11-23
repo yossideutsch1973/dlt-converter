@@ -52,10 +52,17 @@ def load_into_chromadb(files):
     collection = client.create_collection("gmlogger_data")
     
     for file in files:
-        with open(file, 'r') as f:
-            content = f.read()
-            # Split content into chunks if needed
-            chunks = [content[i:i+1000] for i in range(0, len(content), 1000)]
+        try:
+            # Try UTF-8 first
+            with open(file, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            # Fallback to latin-1 which can read any byte values
+            with open(file, 'r', encoding='latin-1') as f:
+                content = f.read()
+        
+        # Split content into chunks if needed
+        chunks = [content[i:i+1000] for i in range(0, len(content), 1000)]
             
             for i, chunk in enumerate(chunks):
                 collection.add(

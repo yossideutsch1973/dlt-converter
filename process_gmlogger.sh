@@ -23,7 +23,14 @@ command -v python3 >/dev/null 2>&1 || { echo "Error: python3 is required but not
 # Check and install Python dependencies
 echo "Checking Python dependencies..."
 python3 -m pip install -U pip
-python3 -m pip install -U onnxruntime torch transformers chromadb tqdm
+
+# Uninstall existing packages to avoid conflicts
+python3 -m pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu
+
+# Install CUDA-compatible versions
+python3 -m pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu118
+python3 -m pip install onnxruntime-gpu==1.16.3
+python3 -m pip install -U transformers chromadb tqdm
 
 # Check CUDA and related dependencies
 echo "Checking CUDA dependencies..."

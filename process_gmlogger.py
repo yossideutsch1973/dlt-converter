@@ -4,6 +4,7 @@ import tarfile
 import chromadb
 import torch
 import logging
+import onnxruntime as ort
 from pathlib import Path
 import subprocess
 import shutil
@@ -64,6 +65,16 @@ def load_into_chromadb(files):
     BATCH_SIZE = 10   # Smaller batch size for better memory management
     MAX_RETRIES = 3   # Number of retries for failed batches
     
+    # Setup CUDA if available
+    if torch.cuda.is_available():
+        print("CUDA is available - Using GPU")
+        # Set ONNX Runtime to use CUDA
+        ort.set_default_logger_severity(3)  # Reduce logging noise
+        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+    else:
+        print("CUDA not available - Using CPU")
+        providers = ['CPUExecutionProvider']
+    
     # Setup ChromaDB with new client format and optimized settings
     persist_dir = "./chroma_db"
     
@@ -72,8 +83,16 @@ def load_into_chromadb(files):
         path=persist_dir,
         settings=chromadb.Settings(
             anonymized_telemetry=False,
-            allow_reset=True
+            allow_reset=True,
+            is_persistent=True
         )
+    )
+
+    # Configure embedding function with CUDA settings
+    embedding_function = embedding_functions.DefaultEmbeddingFunction(
+        device="cuda" if torch.cuda.is_available() else "cpu",
+        provider="cuda" if torch.cuda.is_available() else "cpu",
+        preferred_providers=providers
     )
     
     # Delete existing collection if it exists
@@ -82,10 +101,11 @@ def load_into_chromadb(files):
     except Exception as e:
         print(f"Error deleting collection: {str(e)}")
         
-    # Create collection with default embedding function
+    # Create collection with configured embedding function
     collection = client.create_collection(
         name="gmlogger_data",
-        metadata={"description": "Processed DLT log data"}
+        metadata={"description": "Processed DLT log data"},
+        embedding_function=embedding_function
     )
     
     print("Loading files into ChromaDB...")

@@ -63,18 +63,13 @@ def load_into_chromadb(files):
     CHUNK_SIZE = 500  # Smaller chunks for better processing
     BATCH_SIZE = 20   # Process chunks in batches
     
-    settings = chromadb.Settings(
-        anonymized_telemetry=False,
-        allow_reset=True,
-        is_persistent=True,  # Make persistent to avoid data loss
-        persist_directory="./chroma_db"
-    )
+    # Setup ChromaDB with new client format
+    persist_dir = "./chroma_db"
     
-    # Setup more robust CUDA detection
+    # Setup CUDA detection
     cuda_available = False
     try:
         if torch.cuda.is_available():
-            # Test CUDA initialization
             torch.cuda.init()
             device_count = torch.cuda.device_count()
             if device_count > 0:
@@ -82,15 +77,14 @@ def load_into_chromadb(files):
                 device_name = torch.cuda.get_device_name(0)
                 print(f"CUDA is available - using GPU acceleration")
                 print(f"Found {device_count} CUDA device(s): {device_name}")
-                settings.chroma_db_impl = "duckdb+parquet"
     except Exception as e:
         print(f"CUDA initialization error: {str(e)}")
         
     if not cuda_available:
         print("CUDA not available or initialization failed - falling back to CPU")
-        settings.chroma_db_impl = "duckdb"  # Explicit CPU implementation
-    
-    client = chromadb.Client(settings)
+
+    # Initialize ChromaDB client with new format
+    client = chromadb.PersistentClient(path=persist_dir)
     
     # Delete existing collection if it exists
     try:

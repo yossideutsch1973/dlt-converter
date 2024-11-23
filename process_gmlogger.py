@@ -58,46 +58,69 @@ def process_dlt_files(base_path):
     return converted_files
 
 def load_into_chromadb(files):
-    """Load converted files into ChromaDB"""
-    # Initialize ChromaDB with CUDA-enabled settings if available
+    """Load converted files into ChromaDB with batched processing"""
+    CHUNK_SIZE = 500  # Smaller chunks for better processing
+    BATCH_SIZE = 20   # Process chunks in batches
+    
     settings = chromadb.Settings(
         anonymized_telemetry=False,
         allow_reset=True,
-        is_persistent=False
+        is_persistent=True,  # Make persistent to avoid data loss
+        persist_directory="./chroma_db"
     )
     
     if torch.cuda.is_available():
         print("CUDA is available - using GPU acceleration")
         settings.chroma_db_impl = "duckdb+parquet"
-        settings.persist_directory = None
     else:
         print("CUDA not available - falling back to CPU")
     
     client = chromadb.Client(settings)
-    collection = client.create_collection(
-        name="gmlogger_data",
-    )
+    
+    # Delete existing collection if it exists
+    try:
+        client.delete_collection("gmlogger_data")
+    except:
+        pass
+        
+    collection = client.create_collection(name="gmlogger_data")
     
     print("Loading files into ChromaDB...")
-    for file in tqdm(files, desc="Processing files"):
+    for file_idx, file in enumerate(files):
         try:
             # Try UTF-8 first
             with open(file, 'r', encoding='utf-8') as f:
                 content = f.read()
         except UnicodeDecodeError:
-            # Fallback to latin-1 which can read any byte values
+            # Fallback to latin-1
             with open(file, 'r', encoding='latin-1') as f:
                 content = f.read()
         
-        # Split content into chunks if needed
-        chunks = [content[i:i+1000] for i in range(0, len(content), 1000)]
+        # Split content into smaller chunks
+        chunks = [content[i:i+CHUNK_SIZE] for i in range(0, len(content), CHUNK_SIZE)]
+        print(f"\nProcessing file {file_idx + 1}/{len(files)}: {Path(file).name}")
+        print(f"Split into {len(chunks)} chunks")
         
-        for i, chunk in enumerate(chunks):
-            collection.add(
-                documents=[chunk],
-                metadatas=[{"source": file, "chunk": i}],
-                ids=[f"{Path(file).stem}_chunk_{i}"]
-            )
+        # Process chunks in batches
+        for batch_idx in tqdm(range(0, len(chunks), BATCH_SIZE), desc="Processing batches"):
+            batch_chunks = chunks[batch_idx:batch_idx + BATCH_SIZE]
+            try:
+                collection.add(
+                    documents=batch_chunks,
+                    metadatas=[{
+                        "source": file,
+                        "chunk": i + batch_idx,
+                        "total_chunks": len(chunks)
+                    } for i in range(len(batch_chunks))],
+                    ids=[f"{Path(file).stem}_chunk_{i + batch_idx}" 
+                         for i in range(len(batch_chunks))]
+                )
+            except Exception as e:
+                print(f"\nError processing batch {batch_idx//BATCH_SIZE + 1}: {str(e)}")
+                continue
+    
+    print("\nFinished loading all files into ChromaDB")
+    return collection
 
 def main(gmlogger_archive):
     # Create temporary directory for extraction

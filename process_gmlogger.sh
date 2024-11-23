@@ -25,13 +25,56 @@ echo "Checking Python dependencies..."
 python3 -m pip install -U pip
 python3 -m pip install -U onnxruntime torch transformers chromadb tqdm
 
-# Check for CUDA dependencies
+# Check CUDA and related dependencies
 echo "Checking CUDA dependencies..."
-if ! ldconfig -p | grep -q "libcudnn_adv.so.9\|libnvinfer.so.10"; then
-    echo "Warning: Some CUDA libraries are missing. The script will run in CPU-only mode."
-    echo "To enable GPU support, install:"
-    echo "  - libcudnn8"
-    echo "  - tensorrt"
+
+# Check for NVIDIA driver
+if ! command -v nvidia-smi &> /dev/null; then
+    echo "Warning: NVIDIA driver not found. GPU support will not be available."
+    echo "To enable GPU support, install NVIDIA drivers first."
+elif ! nvidia-smi &> /dev/null; then
+    echo "Warning: NVIDIA driver found but not working properly."
+    echo "Please check your NVIDIA driver installation."
+else
+    echo "NVIDIA driver detected: $(nvidia-smi --query-gpu=driver_version --format=csv,noheader)"
+    
+    # Check CUDA installation
+    if [ ! -d "/usr/local/cuda" ] && [ ! -d "/usr/cuda" ]; then
+        echo "Warning: CUDA installation not found."
+        echo "To enable GPU support, install CUDA toolkit from NVIDIA website."
+    else
+        echo "CUDA installation found."
+        
+        # Check for required libraries
+        MISSING_LIBS=()
+        
+        # Check TensorRT
+        if ! ldconfig -p | grep -q "libnvinfer.so.10"; then
+            MISSING_LIBS+=("tensorrt")
+        fi
+        
+        # Check cuDNN
+        if ! ldconfig -p | grep -q "libcudnn_adv.so.9"; then
+            MISSING_LIBS+=("libcudnn8")
+        fi
+        
+        if [ ${#MISSING_LIBS[@]} -ne 0 ]; then
+            echo "Warning: Some CUDA libraries are missing. The script will run in CPU-only mode."
+            echo "To enable GPU support, install the following packages:"
+            for lib in "${MISSING_LIBS[@]}"; do
+                echo "  - $lib"
+            done
+            echo ""
+            echo "For Ubuntu/Debian, you can install them using:"
+            echo "sudo apt update"
+            echo "sudo apt install ${MISSING_LIBS[*]}"
+            echo ""
+            echo "For other distributions, please consult your package manager"
+            echo "or visit NVIDIA website for installation instructions."
+        else
+            echo "All required CUDA libraries found."
+        fi
+    fi
 fi
 
 # Run the Python script

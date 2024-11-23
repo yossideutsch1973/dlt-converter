@@ -17,7 +17,7 @@ def extract_nested_archives(archive_path, extract_path):
     if archive_path.endswith('.tar.gz'):
         with tarfile.open(archive_path, 'r:gz') as tar_ref:
             members = tar_ref.getmembers()
-            for member in tqdm(members, desc=f"Extracting {Path(archive_path).name}"):
+            for member in tqdm(members, desc=f"Extracting {Path(archive_path).name}", leave=False):
                 tar_ref.extract(member, extract_path)
     elif archive_path.endswith('.zip'):
         with zipfile.ZipFile(archive_path, 'r') as zip_ref:
@@ -55,8 +55,8 @@ def process_dlt_files(base_path):
             ])
     
     if dlt_files:
-        print(f"Found {len(dlt_files)} DLT files")
-        for dlt_path, file in tqdm(dlt_files, desc="Converting DLT files"):
+        print(f"Converting {len(dlt_files)} DLT files...")
+        for dlt_path, file in tqdm(dlt_files, desc="Converting", leave=False):
             output_file = dlt_path + '.txt'
             if convert_dlt_file(dlt_path, output_file):
                 converted_files.append(output_file)
@@ -222,7 +222,8 @@ def load_into_chromadb(files):
     
     print("Loading files into ChromaDB...")
     for file_idx, file in enumerate(files):
-        print(f"\nProcessing file {file_idx + 1}/{len(files)}: {Path(file).name}")
+        if file_idx == 0:
+            print(f"Processing {len(files)} files...")
         
         try:
             # Try UTF-8 first
@@ -235,10 +236,9 @@ def load_into_chromadb(files):
         
         # Split content into smaller chunks
         chunks = [content[i:i+CHUNK_SIZE] for i in range(0, len(content), CHUNK_SIZE)]
-        print(f"Split into {len(chunks)} chunks")
         
         # Process chunks in batches with retry logic
-        for batch_idx in tqdm(range(0, len(chunks), BATCH_SIZE), desc="Processing batches"):
+        for batch_idx in tqdm(range(0, len(chunks), BATCH_SIZE), desc=f"File {file_idx + 1}/{len(files)}", leave=False):
             batch_chunks = chunks[batch_idx:batch_idx + BATCH_SIZE]
             retry_count = 0
             

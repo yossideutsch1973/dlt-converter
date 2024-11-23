@@ -95,22 +95,36 @@ def load_into_chromadb(files):
             return False
 
     try:
+        # Initialize CUDA early
+        torch.cuda.init()
+        
         # Check CUDA environment variables
         cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', 'not set')
         print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}")
         
-        try:
-            if torch.cuda.is_available():
-                cuda_device = torch.cuda.get_device_name(0)
-                print(f"CUDA capable GPU detected: {cuda_device}")
-        except RuntimeError as e:
-            print(f"CUDA initialization error: {e}")
-            print("This might be due to:")
-            print("1. CUDA_VISIBLE_DEVICES being changed after Python started")
-            print("2. Incompatible CUDA driver version")
-            print("3. Missing or incorrect NVIDIA driver installation")
-            print("\nFalling back to CPU only mode")
+        if torch.cuda.is_available():
+            # Force device synchronization to catch any initialization issues
+            torch.cuda.synchronize()
+            cuda_device = torch.cuda.get_device_name(0)
+            print(f"CUDA capable GPU detected: {cuda_device}")
+            print(f"CUDA version: {torch.version.cuda}")
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        else:
+            print("CUDA is not available - Using CPU only")
             return ['CPUExecutionProvider']
+            
+    except RuntimeError as e:
+        print(f"CUDA initialization error: {e}")
+        print("\nDiagnostic information:")
+        print(f"PyTorch version: {torch.__version__}")
+        print(f"CUDA available: {torch.cuda.is_available()}")
+        print(f"CUDA version: {torch.version.cuda}")
+        print("\nThis might be due to:")
+        print("1. CUDA_VISIBLE_DEVICES being changed after Python started")
+        print("2. Incompatible CUDA driver version")
+        print("3. Missing or incorrect NVIDIA driver installation")
+        print("\nFalling back to CPU only mode")
+        return ['CPUExecutionProvider']
             
             # Check specific libraries
             cuda_libs = {

@@ -116,8 +116,14 @@ else
     fi
 fi
 
-# Export clean CUDA environment
-export CUDA_VISIBLE_DEVICES=0
+# Set CUDA device before Python starts
+if nvidia-smi &> /dev/null; then
+    export CUDA_VISIBLE_DEVICES=0
+    # Force PyTorch to reinitialize CUDA
+    export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+else
+    export CUDA_VISIBLE_DEVICES=""
+fi
 
 # Run the Python script
 python3 process_gmlogger.py "$GMLOGGER_FILE"

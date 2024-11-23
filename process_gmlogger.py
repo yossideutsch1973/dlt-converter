@@ -65,14 +65,18 @@ def load_into_chromadb(files):
     BATCH_SIZE = 10   # Smaller batch size for better memory management
     MAX_RETRIES = 3   # Number of retries for failed batches
     
-    # Setup CUDA if available
-    if torch.cuda.is_available():
-        print("CUDA is available - Using GPU")
-        # Set ONNX Runtime to use CUDA
-        ort.set_default_logger_severity(3)  # Reduce logging noise
-        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-    else:
-        print("CUDA not available - Using CPU")
+    # Setup CUDA environment
+    try:
+        if torch.cuda.is_available():
+            print(f"CUDA is available - Using GPU: {torch.cuda.get_device_name(0)}")
+            torch.cuda.set_device(0)  # Explicitly set to first GPU
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        else:
+            print("CUDA not available - Using CPU")
+            providers = ['CPUExecutionProvider']
+    except Exception as e:
+        print(f"Warning: CUDA initialization error: {e}")
+        print("Falling back to CPU")
         providers = ['CPUExecutionProvider']
     
     # Setup ChromaDB with new client format and optimized settings
@@ -88,12 +92,8 @@ def load_into_chromadb(files):
         )
     )
 
-    # Configure embedding function with CUDA settings
-    embedding_function = embedding_functions.DefaultEmbeddingFunction(
-        device="cuda" if torch.cuda.is_available() else "cpu",
-        provider="cuda" if torch.cuda.is_available() else "cpu",
-        preferred_providers=providers
-    )
+    # Configure embedding function with appropriate settings
+    embedding_function = embedding_functions.DefaultEmbeddingFunction()
     
     # Delete existing collection if it exists
     try:

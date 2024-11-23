@@ -65,19 +65,28 @@ def load_into_chromadb(files):
     BATCH_SIZE = 10   # Smaller batch size for better memory management
     MAX_RETRIES = 3   # Number of retries for failed batches
     
-    # Setup CUDA environment
+    # Setup environment and providers
+    providers = ['CPUExecutionProvider']  # Start with CPU as default
+    
     try:
+        # Check CUDA availability without initializing
         if torch.cuda.is_available():
-            print(f"CUDA is available - Using GPU: {torch.cuda.get_device_name(0)}")
-            torch.cuda.set_device(0)  # Explicitly set to first GPU
+            cuda_device = torch.cuda.get_device_name(0)
+            print(f"CUDA capable GPU detected: {cuda_device}")
+            
+            # Test CUDA initialization
+            torch.cuda.init()
+            torch.cuda.set_device(0)
+            
+            # Only add CUDA provider if initialization successful
             providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+            print("CUDA initialization successful - GPU will be used if possible")
         else:
-            print("CUDA not available - Using CPU")
-            providers = ['CPUExecutionProvider']
+            print("No CUDA capable GPU detected - Using CPU only")
+            
     except Exception as e:
-        print(f"Warning: CUDA initialization error: {e}")
-        print("Falling back to CPU")
-        providers = ['CPUExecutionProvider']
+        print(f"Warning: GPU initialization failed: {e}")
+        print("Continuing with CPU only mode")
     
     # Setup ChromaDB with new client format and optimized settings
     persist_dir = "./chroma_db"
@@ -92,8 +101,17 @@ def load_into_chromadb(files):
         )
     )
 
-    # Configure embedding function with appropriate settings
-    embedding_function = embedding_functions.DefaultEmbeddingFunction()
+    # Configure embedding function with CPU-safe settings
+    try:
+        embedding_function = embedding_functions.DefaultEmbeddingFunction()
+        # Test the embedding function
+        test_result = embedding_function(["test"])
+        print("Embedding function initialized successfully")
+    except Exception as e:
+        print(f"Error initializing embedding function: {e}")
+        print("Please ensure all required dependencies are installed:")
+        print("pip install -U onnxruntime torch transformers")
+        raise
     
     # Delete existing collection if it exists
     try:

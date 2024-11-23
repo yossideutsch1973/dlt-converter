@@ -22,5 +22,10 @@ fi
 command -v dlt-convert >/dev/null 2>&1 || { echo "Error: dlt-convert is required but not installed"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "Error: python3 is required but not installed"; exit 1; }
 
+# Check and install Python dependencies
+echo "Checking Python dependencies..."
+python3 -m pip install -U pip
+python3 -m pip install -U onnxruntime torch transformers chromadb tqdm
+
 # Run the Python script
 python3 process_gmlogger.py "$1"

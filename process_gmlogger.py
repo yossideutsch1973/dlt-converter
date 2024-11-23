@@ -108,12 +108,21 @@ def load_into_chromadb(files):
             return False
 
     try:
-        # Try to initialize CUDA silently
-        if torch.cuda.is_available():
-            torch.cuda.init()
+        # Suppress CUDA initialization warnings
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
         
-        # Verify CUDA availability after initialization attempt
-        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            # Try to initialize CUDA silently
+            cuda_available = False
+            try:
+                if torch.cuda.is_available():
+                    torch.cuda.init()
+                    cuda_available = torch.cuda.is_available() and torch.cuda.device_count() > 0
+            except Exception:
+                cuda_available = False
+            
+        if cuda_available:
             # Try to get device info without synchronization
             cuda_device = torch.cuda.get_device_name(0)
             print(f"Using GPU: {cuda_device}")

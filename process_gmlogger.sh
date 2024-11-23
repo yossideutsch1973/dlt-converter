@@ -108,8 +108,14 @@ fi
 
 # Set minimal CUDA environment
 if nvidia-smi &> /dev/null; then
-    export CUDA_VISIBLE_DEVICES=0
-    export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
+    # Check for required CUDA libraries
+    if ! ldconfig -p | grep -q "libnvinfer.so" || ! ldconfig -p | grep -q "libcudnn.so"; then
+        echo "Warning: Required CUDA libraries missing. Using CPU mode."
+        export CUDA_VISIBLE_DEVICES=""
+    else
+        export CUDA_VISIBLE_DEVICES=0
+        export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
+    fi
 else
     export CUDA_VISIBLE_DEVICES=""
 fi

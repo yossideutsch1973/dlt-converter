@@ -35,19 +35,9 @@ python3 -m pip install -U transformers chromadb tqdm
 # Unset CUDA_VISIBLE_DEVICES to ensure clean state
 unset CUDA_VISIBLE_DEVICES
 
-# Check CUDA and related dependencies
-echo "Checking CUDA dependencies..."
-
-# Check NVIDIA driver and CUDA capabilities
-echo "Checking NVIDIA driver..."
-if ! command -v nvidia-smi &> /dev/null; then
-    echo "Warning: NVIDIA driver not found. GPU support will not be available."
-    echo "To enable GPU support, install NVIDIA drivers first."
-elif ! nvidia-smi &> /dev/null; then
-    echo "Warning: NVIDIA driver found but not working properly."
-    echo "Please check your NVIDIA driver installation."
-else
-    echo "NVIDIA driver detected: $(nvidia-smi --query-gpu=driver_version --format=csv,noheader)"
+# Quick CUDA check
+if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
+    echo "NVIDIA GPU detected: $(nvidia-smi --query-gpu=name --format=csv,noheader)"
     
     # Check CUDA installation
     if [ ! -d "/usr/local/cuda" ] && [ ! -d "/usr/cuda" ]; then
@@ -116,16 +106,12 @@ else
     fi
 fi
 
-# Set CUDA environment before Python starts
+# Set minimal CUDA environment
 if nvidia-smi &> /dev/null; then
-    # Get the first available GPU
-    GPU_ID=$(nvidia-smi --query-gpu=index --format=csv,noheader | head -n1)
-    export CUDA_VISIBLE_DEVICES=$GPU_ID
-    export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
-    # Pre-allocate GPU memory
-    export CUDA_LAUNCH_BLOCKING=1
+    export CUDA_VISIBLE_DEVICES=0
+    export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
 else
-    export CUDA_VISIBLE_DEVICES="-1"
+    export CUDA_VISIBLE_DEVICES=""
 fi
 
 # Run the Python script

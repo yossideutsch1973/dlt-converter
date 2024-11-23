@@ -69,11 +69,13 @@ def load_into_chromadb(files):
     BATCH_SIZE = 10   # Smaller batch size for better memory management
     MAX_RETRIES = 3   # Number of retries for failed batches
     
-    # Setup environment and providers
-    providers = []
+    # Suppress all CUDA related warnings
+    logging.getLogger("torch.cuda").setLevel(logging.CRITICAL)
+    logging.getLogger("onnxruntime").setLevel(logging.ERROR)
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
     
-    # Disable CUDA warnings
-    logging.getLogger("torch.cuda").setLevel(logging.ERROR)
+    # Setup providers list
+    providers = []
     
     def check_cuda_library(lib_name):
         """Check for CUDA library in common locations"""
@@ -105,17 +107,9 @@ def load_into_chromadb(files):
         
         # Verify CUDA availability after initialization attempt
         if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-            try:
-                # Try to get device info and synchronize
-                cuda_device = torch.cuda.get_device_name(0)
-                torch.cuda.synchronize()
-                print(f"CUDA capable GPU detected: {cuda_device}")
-                print(f"CUDA version: {torch.version.cuda}")
-                print(f"Number of devices: {torch.cuda.device_count()}")
-            except RuntimeError as sync_error:
-                print(f"Warning: CUDA device synchronization failed: {sync_error}")
-                print("Falling back to CPU only mode")
-                return ['CPUExecutionProvider']
+            # Try to get device info without synchronization
+            cuda_device = torch.cuda.get_device_name(0)
+            print(f"Using GPU: {cuda_device}")
             
             # Check specific libraries
             cuda_libs = {

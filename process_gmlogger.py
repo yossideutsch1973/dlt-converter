@@ -72,10 +72,25 @@ def load_into_chromadb(files):
     providers = ['CPUExecutionProvider']  # Start with CPU as default
     
     def check_cuda_library(lib_name):
+        """Check for CUDA library in common locations"""
         try:
             import ctypes
-            ctypes.CDLL(lib_name)
-            return True
+            # Common library paths
+            lib_paths = [
+                lib_name,  # Direct name for LD_LIBRARY_PATH
+                f"/usr/lib/{lib_name}",
+                f"/usr/lib/x86_64-linux-gnu/{lib_name}",
+                f"/usr/local/cuda/lib64/{lib_name}",
+                f"/usr/local/cuda/targets/x86_64-linux/{lib_name}"
+            ]
+            
+            for path in lib_paths:
+                try:
+                    ctypes.CDLL(path)
+                    return True
+                except Exception:
+                    continue
+            return False
         except Exception:
             return False
 

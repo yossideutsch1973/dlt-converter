@@ -48,13 +48,19 @@ else
         # Check for required libraries
         MISSING_LIBS=()
         
-        # Check TensorRT
-        if ! ldconfig -p | grep -q "libnvinfer.so.10"; then
+        # Check TensorRT with multiple possible paths
+        if ! (ldconfig -p | grep -q "libnvinfer.so.10" || \
+              [ -f "/usr/lib/libnvinfer.so.10" ] || \
+              [ -f "/usr/lib/x86_64-linux-gnu/libnvinfer.so.10" ] || \
+              [ -f "/usr/local/cuda/lib64/libnvinfer.so.10" ]); then
             MISSING_LIBS+=("tensorrt")
         fi
         
-        # Check cuDNN
-        if ! ldconfig -p | grep -q "libcudnn_adv.so.9"; then
+        # Check cuDNN with multiple possible paths
+        if ! (ldconfig -p | grep -q "libcudnn_adv.so.9" || \
+              [ -f "/usr/lib/libcudnn_adv.so.9" ] || \
+              [ -f "/usr/lib/x86_64-linux-gnu/libcudnn_adv.so.9" ] || \
+              [ -f "/usr/local/cuda/lib64/libcudnn_adv.so.9" ]); then
             MISSING_LIBS+=("libcudnn8")
         fi
         

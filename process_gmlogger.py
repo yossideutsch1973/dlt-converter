@@ -144,33 +144,10 @@ def load_into_chromadb(files):
         print("3. Missing or incorrect NVIDIA driver installation")
         print("\nFalling back to CPU only mode")
         return ['CPUExecutionProvider']
-            
-            missing_libs = []
-            for lib, name in cuda_libs.items():
-                if not check_cuda_library(lib):
-                    missing_libs.append(f"{name} ({lib})")
-            
-            if missing_libs:
-                print("\nWarning: The following CUDA libraries are missing:")
-                for lib in missing_libs:
-                    print(f"  - {lib}")
-                print("\nFalling back to CPU only mode")
-                print("See installation instructions in process_gmlogger.sh")
-            else:
-                try:
-                    # Test CUDA initialization
-                    torch.cuda.init()
-                    torch.cuda.set_device(0)
-                    providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-                    print("CUDA initialization successful - GPU will be used")
-                except Exception as e:
-                    print(f"\nWarning: CUDA initialization failed: {e}")
-                    print("Falling back to CPU only mode")
-        else:
-            print("No CUDA capable GPU detected - Using CPU only")
     except Exception as e:
         print(f"\nWarning: GPU detection failed: {e}")
         print("Continuing with CPU only mode")
+        return ['CPUExecutionProvider']
     
     # Setup ChromaDB with new client format and optimized settings
     persist_dir = "./chroma_db"

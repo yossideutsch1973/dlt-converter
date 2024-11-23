@@ -1,22 +1,20 @@
 #!/bin/bash
 
-# Check if input file provided
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <gmlogger_archive_file>"
-    exit 1
-fi
+# Find gmlogger archive file
+GMLOGGER_FILE=$(ls gmlogger*.zip gmlogger*.tar.gz 2>/dev/null | head -n 1)
 
-# Check if file exists
-if [ ! -f "$1" ]; then
-    echo "Error: File $1 does not exist"
+if [ -z "$GMLOGGER_FILE" ]; then
+    echo "Error: No gmlogger archive file (zip or tar.gz) found in current directory"
     exit 1
 fi
 
 # Check if file is a supported format
-if [[ ! "$1" =~ \.(zip|tar\.gz)$ ]]; then
+if [[ ! "$GMLOGGER_FILE" =~ \.(zip|tar\.gz)$ ]]; then
     echo "Error: File must be a .zip or .tar.gz archive"
     exit 1
 fi
+
+echo "Found archive file: $GMLOGGER_FILE"
 
 # Check if required tools are installed
 command -v dlt-convert >/dev/null 2>&1 || { echo "Error: dlt-convert is required but not installed"; exit 1; }
@@ -28,4 +26,4 @@ python3 -m pip install -U pip
 python3 -m pip install -U onnxruntime torch transformers chromadb tqdm
 
 # Run the Python script
-python3 process_gmlogger.py "$1"
+python3 process_gmlogger.py "$GMLOGGER_FILE"

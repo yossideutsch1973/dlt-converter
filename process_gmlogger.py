@@ -60,42 +60,38 @@ def process_dlt_files(base_path):
 
 def load_into_chromadb(files):
     """Load converted files into ChromaDB with batched processing"""
-    CHUNK_SIZE = 500  # Smaller chunks for better processing
-    BATCH_SIZE = 20   # Process chunks in batches
+    CHUNK_SIZE = 250  # Reduced chunk size for better stability
+    BATCH_SIZE = 10   # Smaller batch size for better memory management
+    MAX_RETRIES = 3   # Number of retries for failed batches
     
-    # Setup ChromaDB with new client format
+    # Setup ChromaDB with new client format and optimized settings
     persist_dir = "./chroma_db"
     
-    # Setup CUDA detection
-    cuda_available = False
-    try:
-        if torch.cuda.is_available():
-            torch.cuda.init()
-            device_count = torch.cuda.device_count()
-            if device_count > 0:
-                cuda_available = True
-                device_name = torch.cuda.get_device_name(0)
-                print(f"CUDA is available - using GPU acceleration")
-                print(f"Found {device_count} CUDA device(s): {device_name}")
-    except Exception as e:
-        print(f"CUDA initialization error: {str(e)}")
-        
-    if not cuda_available:
-        print("CUDA not available or initialization failed - falling back to CPU")
-
-    # Initialize ChromaDB client with new format
-    client = chromadb.PersistentClient(path=persist_dir)
+    # Initialize ChromaDB client with new format and settings
+    client = chromadb.PersistentClient(
+        path=persist_dir,
+        settings=chromadb.Settings(
+            anonymized_telemetry=False,
+            allow_reset=True
+        )
+    )
     
     # Delete existing collection if it exists
     try:
         client.delete_collection("gmlogger_data")
-    except:
-        pass
+    except Exception as e:
+        print(f"Error deleting collection: {str(e)}")
         
-    collection = client.create_collection(name="gmlogger_data")
+    # Create collection with default embedding function
+    collection = client.create_collection(
+        name="gmlogger_data",
+        metadata={"description": "Processed DLT log data"}
+    )
     
     print("Loading files into ChromaDB...")
     for file_idx, file in enumerate(files):
+        print(f"\nProcessing file {file_idx + 1}/{len(files)}: {Path(file).name}")
+        
         try:
             # Try UTF-8 first
             with open(file, 'r', encoding='utf-8') as f:
@@ -107,26 +103,33 @@ def load_into_chromadb(files):
         
         # Split content into smaller chunks
         chunks = [content[i:i+CHUNK_SIZE] for i in range(0, len(content), CHUNK_SIZE)]
-        print(f"\nProcessing file {file_idx + 1}/{len(files)}: {Path(file).name}")
         print(f"Split into {len(chunks)} chunks")
         
-        # Process chunks in batches
+        # Process chunks in batches with retry logic
         for batch_idx in tqdm(range(0, len(chunks), BATCH_SIZE), desc="Processing batches"):
             batch_chunks = chunks[batch_idx:batch_idx + BATCH_SIZE]
-            try:
-                collection.add(
-                    documents=batch_chunks,
-                    metadatas=[{
-                        "source": file,
-                        "chunk": i + batch_idx,
-                        "total_chunks": len(chunks)
-                    } for i in range(len(batch_chunks))],
-                    ids=[f"{Path(file).stem}_chunk_{i + batch_idx}" 
-                         for i in range(len(batch_chunks))]
-                )
-            except Exception as e:
-                print(f"\nError processing batch {batch_idx//BATCH_SIZE + 1}: {str(e)}")
-                continue
+            retry_count = 0
+            
+            while retry_count < MAX_RETRIES:
+                try:
+                    collection.add(
+                        documents=batch_chunks,
+                        metadatas=[{
+                            "source": file,
+                            "chunk": i + batch_idx,
+                            "total_chunks": len(chunks)
+                        } for i in range(len(batch_chunks))],
+                        ids=[f"{Path(file).stem}_chunk_{i + batch_idx}" 
+                             for i in range(len(batch_chunks))]
+                    )
+                    break  # Success, exit retry loop
+                    
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count == MAX_RETRIES:
+                        print(f"\nFailed to process batch {batch_idx//BATCH_SIZE + 1} after {MAX_RETRIES} attempts: {str(e)}")
+                    else:
+                        print(f"\nRetrying batch {batch_idx//BATCH_SIZE + 1} (attempt {retry_count + 1})")
     
     print("\nFinished loading all files into ChromaDB")
     return collection

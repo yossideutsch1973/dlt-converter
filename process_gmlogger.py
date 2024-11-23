@@ -35,7 +35,14 @@ def extract_nested_archives(archive_path, extract_path):
 def convert_dlt_file(dlt_file, output_file):
     """Convert DLT file to text format using dlt-convert"""
     try:
-        subprocess.run(['dlt-convert', '-a', dlt_file, '-o', output_file], check=True)
+        # Redirect stdout and stderr to devnull to suppress output
+        with open(os.devnull, 'w') as devnull:
+            subprocess.run(
+                ['dlt-convert', '-a', dlt_file, '-o', output_file],
+                check=True,
+                stdout=devnull,
+                stderr=devnull
+            )
         return True
     except subprocess.CalledProcessError:
         print(f"Error converting {dlt_file}")

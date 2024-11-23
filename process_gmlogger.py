@@ -13,13 +13,16 @@ from tqdm import tqdm
 from chromadb.utils import embedding_functions
 
 def extract_nested_archives(archive_path, extract_path):
-    """Recursively extract nested archives (zip and tar.gz)"""
+    """Recursively extract nested archives (zip and tar.gz) with progress bar"""
     if archive_path.endswith('.tar.gz'):
         with tarfile.open(archive_path, 'r:gz') as tar_ref:
-            tar_ref.extractall(extract_path)
+            members = tar_ref.getmembers()
+            for member in tqdm(members, desc=f"Extracting {Path(archive_path).name}"):
+                tar_ref.extract(member, extract_path)
     elif archive_path.endswith('.zip'):
         with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_path)
+            for member in tqdm(zip_ref.namelist(), desc=f"Extracting {Path(archive_path).name}"):
+                zip_ref.extract(member, extract_path)
     
     # Look for more archives in extracted content
     for root, _, files in os.walk(extract_path):

@@ -95,19 +95,30 @@ def load_into_chromadb(files):
             return False
 
     try:
-        # Initialize CUDA early
-        torch.cuda.init()
-        
-        # Check CUDA environment variables
+        # Get CUDA environment state before initialization
         cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', 'not set')
         print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}")
         
-        if torch.cuda.is_available():
-            # Force device synchronization to catch any initialization issues
-            torch.cuda.synchronize()
-            cuda_device = torch.cuda.get_device_name(0)
-            print(f"CUDA capable GPU detected: {cuda_device}")
-            print(f"CUDA version: {torch.version.cuda}")
+        # Try to initialize CUDA with error capture
+        try:
+            torch.cuda.init()
+        except RuntimeError as cuda_init_error:
+            print(f"CUDA initialization warning: {cuda_init_error}")
+            print("Attempting to continue with initialization...")
+        
+        # Verify CUDA availability after initialization attempt
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            try:
+                # Try to get device info and synchronize
+                cuda_device = torch.cuda.get_device_name(0)
+                torch.cuda.synchronize()
+                print(f"CUDA capable GPU detected: {cuda_device}")
+                print(f"CUDA version: {torch.version.cuda}")
+                print(f"Number of devices: {torch.cuda.device_count()}")
+            except RuntimeError as sync_error:
+                print(f"Warning: CUDA device synchronization failed: {sync_error}")
+                print("Falling back to CPU only mode")
+                return ['CPUExecutionProvider']
             
             # Check specific libraries
             cuda_libs = {

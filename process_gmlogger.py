@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import shutil
 import tempfile
+from tqdm import tqdm
+from chromadb.utils import embedding_functions
 
 def extract_nested_archives(archive_path, extract_path):
     """Recursively extract nested archives (zip and tar.gz)"""
@@ -36,22 +38,39 @@ def convert_dlt_file(dlt_file, output_file):
 def process_dlt_files(base_path):
     """Find and convert all DLT files"""
     converted_files = []
+    dlt_files = []
+    
+    # First collect all DLT files
     for root, _, files in os.walk(base_path):
         if 'qnx' in root.lower():
-            for file in files:
-                if file.endswith('.dlt'):
-                    dlt_file = os.path.join(root, file)
-                    output_file = dlt_file + '.txt'
-                    if convert_dlt_file(dlt_file, output_file):
-                        converted_files.append(output_file)
+            dlt_files.extend([
+                (os.path.join(root, file), file)
+                for file in files if file.endswith('.dlt')
+            ])
+    
+    if dlt_files:
+        print(f"Found {len(dlt_files)} DLT files")
+        for dlt_path, file in tqdm(dlt_files, desc="Converting DLT files"):
+            output_file = dlt_path + '.txt'
+            if convert_dlt_file(dlt_path, output_file):
+                converted_files.append(output_file)
     return converted_files
 
 def load_into_chromadb(files):
     """Load converted files into ChromaDB"""
+    # Initialize ChromaDB with GPU-enabled embeddings
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key="",  # Leave empty to use local GPU
+        model_name="all-MiniLM-L6-v2"
+    )
     client = chromadb.Client()
-    collection = client.create_collection("gmlogger_data")
+    collection = client.create_collection(
+        name="gmlogger_data",
+        embedding_function=openai_ef
+    )
     
-    for file in files:
+    print("Loading files into ChromaDB...")
+    for file in tqdm(files, desc="Processing files"):
         try:
             # Try UTF-8 first
             with open(file, 'r', encoding='utf-8') as f:

@@ -63,13 +63,13 @@ def load_into_chromadb(files):
         
         # Split content into chunks if needed
         chunks = [content[i:i+1000] for i in range(0, len(content), 1000)]
-            
-            for i, chunk in enumerate(chunks):
-                collection.add(
-                    documents=[chunk],
-                    metadatas=[{"source": file, "chunk": i}],
-                    ids=[f"{Path(file).stem}_chunk_{i}"]
-                )
+        
+        for i, chunk in enumerate(chunks):
+            collection.add(
+                documents=[chunk],
+                metadatas=[{"source": file, "chunk": i}],
+                ids=[f"{Path(file).stem}_chunk_{i}"]
+            )
 
 def main(gmlogger_archive):
     # Create temporary directory for extraction

@@ -27,9 +27,9 @@ python3 -m pip install -U pip
 # Uninstall existing packages to avoid conflicts
 python3 -m pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu
 
-# Install CUDA-compatible versions
-python3 -m pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu118
-python3 -m pip install onnxruntime-gpu==1.16.3
+# Install latest CUDA 12-compatible versions
+python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+python3 -m pip install --no-cache-dir onnxruntime-gpu
 python3 -m pip install -U transformers chromadb tqdm
 
 # Unset CUDA_VISIBLE_DEVICES to ensure clean state
@@ -49,20 +49,20 @@ if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
         # Check for required libraries
         MISSING_LIBS=()
         
-        # Check TensorRT with multiple possible paths
-        if ! (ldconfig -p | grep -q "libnvinfer.so.10" || \
-              [ -f "/usr/lib/libnvinfer.so.10" ] || \
-              [ -f "/usr/lib/x86_64-linux-gnu/libnvinfer.so.10" ] || \
-              [ -f "/usr/local/cuda/lib64/libnvinfer.so.10" ]); then
+        # Check TensorRT with multiple possible paths (any version)
+        if ! (ldconfig -p | grep -q "libnvinfer.so" || \
+              [ -f "/usr/lib/libnvinfer.so" ] || \
+              [ -f "/usr/lib/x86_64-linux-gnu/libnvinfer.so" ] || \
+              [ -f "/usr/local/cuda/lib64/libnvinfer.so" ]); then
             MISSING_LIBS+=("tensorrt")
         fi
         
-        # Check cuDNN with multiple possible paths
-        if ! (ldconfig -p | grep -q "libcudnn_adv.so.9" || \
-              [ -f "/usr/lib/libcudnn_adv.so.9" ] || \
-              [ -f "/usr/lib/x86_64-linux-gnu/libcudnn_adv.so.9" ] || \
-              [ -f "/usr/local/cuda/lib64/libcudnn_adv.so.9" ]); then
-            MISSING_LIBS+=("libcudnn8")
+        # Check cuDNN with multiple possible paths (any version)
+        if ! (ldconfig -p | grep -q "libcudnn.so" || \
+              [ -f "/usr/lib/libcudnn.so" ] || \
+              [ -f "/usr/lib/x86_64-linux-gnu/libcudnn.so" ] || \
+              [ -f "/usr/local/cuda/lib64/libcudnn.so" ]); then
+            MISSING_LIBS+=("cudnn")
         fi
         
         if [ ${#MISSING_LIBS[@]} -ne 0 ]; then

@@ -5,8 +5,8 @@ from tqdm import tqdm
 import textwrap
 
 def setup_llm():
-    """Initialize the Llama 3.2 3B model"""
-    model_name = "meta-llama/Llama-2-3b-chat-hf"
+    """Initialize the Mistral 7B model"""
+    model_name = "mistralai/Mistral-7B-v0.1"
     
     # Check for CUDA availability
     device = "cuda" if torch.cuda.is_available() else "cpu"

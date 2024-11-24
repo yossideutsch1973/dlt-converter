@@ -5,19 +5,20 @@ from tqdm import tqdm
 import textwrap
 
 def setup_llm():
-    """Initialize the Mistral 7B model"""
-    model_name = "mistralai/Mistral-7B-v0.1"
+    """Initialize the Phi-3.5 model"""
+    model_name = "microsoft/phi-2"
     
     # Check for CUDA availability
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-            device_map="auto"
+            device_map="auto",
+            trust_remote_code=True
         )
         
         pipe = pipeline(

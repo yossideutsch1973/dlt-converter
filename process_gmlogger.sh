@@ -30,7 +30,7 @@ python3 -m pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime
 # Install latest CUDA 12-compatible versions
 python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 python3 -m pip install --no-cache-dir onnxruntime-gpu
-python3 -m pip install -U transformers chromadb tqdm accelerate einops
+python3 -m pip install -U transformers chromadb tqdm 'accelerate>=0.26.0' einops
 
 # Unset CUDA_VISIBLE_DEVICES to ensure clean state
 unset CUDA_VISIBLE_DEVICES

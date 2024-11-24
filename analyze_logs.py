@@ -17,8 +17,9 @@ def setup_llm():
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-            device_map="auto",
-            trust_remote_code=True
+            trust_remote_code=True,
+            device_map="auto" if device == "cuda" else None,
+            low_cpu_mem_usage=device == "cuda"
         )
         
         pipe = pipeline(

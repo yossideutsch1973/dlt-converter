@@ -41,6 +41,7 @@ gmlogger*.zip
 gmlogger*.tar.gz
 temp/
 logs/
+*.deb
 
 # CUDA/GPU
 .nv/

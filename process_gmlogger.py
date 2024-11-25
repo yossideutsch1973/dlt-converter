@@ -117,9 +117,12 @@ def load_into_chromadb(files):
             cuda_available = False
             try:
                 if torch.cuda.is_available():
-                    torch.cuda.init()
+                    # Don't call torch.cuda.init() as it's automatically handled
                     cuda_available = torch.cuda.is_available() and torch.cuda.device_count() > 0
-            except Exception:
+                    # Force CUDA initialization
+                    torch.cuda.current_device()
+            except Exception as e:
+                print(f"CUDA initialization warning (safe to ignore if using CPU): {e}")
                 cuda_available = False
             
         if cuda_available:
@@ -193,8 +196,7 @@ def load_into_chromadb(files):
         else:
             ort_providers.append('CPUExecutionProvider')
             
-        # Set environment variable to suppress CUDA initialization warnings
-        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        # Don't override CUDA_VISIBLE_DEVICES here as it may interfere with GPU detection
         
         embedding_function = embedding_functions.DefaultEmbeddingFunction()
         

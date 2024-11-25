@@ -20,17 +20,40 @@ echo "Found archive file: $GMLOGGER_FILE"
 command -v dlt-convert >/dev/null 2>&1 || { echo "Error: dlt-convert is required but not installed"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "Error: python3 is required but not installed"; exit 1; }
 
-# Check and install Python dependencies
+# Check Python dependencies without installing
 echo "Checking Python dependencies..."
-python3 -m pip install -U pip
+MISSING_DEPS=()
 
-# Uninstall existing packages to avoid conflicts
-python3 -m pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu
+check_package() {
+    if ! python3 -c "import $1" 2>/dev/null; then
+        MISSING_DEPS+=("$1")
+    fi
+}
 
-# Install latest CUDA 12-compatible versions
-python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-python3 -m pip install --no-cache-dir onnxruntime-gpu
-python3 -m pip install -U transformers chromadb tqdm 'accelerate>=0.26.0' einops
+# Check each required package
+check_package "torch"
+check_package "transformers"
+check_package "chromadb"
+check_package "tqdm"
+check_package "einops"
+check_package "onnxruntime"
+
+if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+    echo "Warning: Missing Python packages:"
+    for pkg in "${MISSING_DEPS[@]}"; do
+        echo "  - $pkg"
+    done
+    echo ""
+    echo "To install missing packages, run:"
+    echo "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"
+    echo "pip install transformers chromadb tqdm einops onnxruntime-gpu"
+    echo ""
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
 
 # Unset CUDA_VISIBLE_DEVICES to ensure clean state
 unset CUDA_VISIBLE_DEVICES

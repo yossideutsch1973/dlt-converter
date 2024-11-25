@@ -1,0 +1,12 @@
+# Core dependencies
+torch --index-url https://download.pytorch.org/whl/cu121
+torchvision --index-url https://download.pytorch.org/whl/cu121
+torchaudio --index-url https://download.pytorch.org/whl/cu121
+transformers>=4.36.0
+chromadb>=0.4.18
+tqdm>=4.66.1
+einops>=0.7.0
+onnxruntime-gpu>=1.16.3
+
+# Optional dependencies for better performance
+accelerate>=0.25.0

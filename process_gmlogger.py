@@ -132,8 +132,8 @@ def load_into_chromadb(files):
             
             # Check specific libraries
             cuda_libs = {
-                "libcudnn_adv.so.9": "cuDNN Advanced",
-                "libnvinfer.so.10": "TensorRT"
+                "libnvinfer.so": "TensorRT",
+                "libcudnn.so": "cuDNN"
             }
             
             missing_libs = []

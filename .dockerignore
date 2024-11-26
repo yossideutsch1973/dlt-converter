@@ -1,0 +1,56 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+chroma_db/
+*.dlt
+*.dlt.txt
+gmlogger*.zip
+gmlogger*.tar.gz
+temp/
+logs/
+*.deb
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CUDA/GPU
+.nv/

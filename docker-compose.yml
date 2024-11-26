@@ -9,6 +9,9 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
+      - NVIDIA_TF32_OVERRIDE=1
+      - CUDA_MODULE_LOADING=LAZY
+      - ONNXRUNTIME_CUDA_DEVICE_ID=0
     deploy:
       resources:
         reservations:

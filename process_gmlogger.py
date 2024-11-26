@@ -81,8 +81,19 @@ def load_into_chromadb(files):
     logging.getLogger("onnxruntime").setLevel(logging.ERROR)
     os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
     
-    # Setup providers list
+    # Setup providers list with explicit GPU configuration
     providers = []
+    
+    def get_gpu_provider_options():
+        return {
+            'device_id': 0,
+            'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB GPU memory limit
+            'arena_extend_strategy': 'kNextPowerOfTwo',
+            'gpu_external_alloc': True,
+            'gpu_external_free': True,
+            'cudnn_conv_algo_search': 'EXHAUSTIVE',
+            'do_copy_in_default_stream': True,
+        }
     
     def check_cuda_library(lib_name):
         """Check for CUDA library in common locations"""
@@ -186,15 +197,28 @@ def load_into_chromadb(files):
     # Configure ONNX Runtime session options
     session_options = ort.SessionOptions()
     session_options.log_severity_level = 3  # Reduce logging noise
+    session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    session_options.enable_profiling = True
+    session_options.enable_mem_pattern = True
+    session_options.intra_op_num_threads = 1  # Reduce CPU threads to force GPU usage
     
-    # Configure embedding function with CPU-safe settings
+    # Configure embedding function with GPU-optimized settings
     try:
-        # Initialize with explicit provider order
+        # Initialize with explicit provider order and GPU options
         ort_providers = []
         if 'CUDAExecutionProvider' in providers:
-            ort_providers.extend(['CUDAExecutionProvider', 'CPUExecutionProvider'])
+            provider_options = {
+                'CUDAExecutionProvider': get_gpu_provider_options()
+            }
+            ort_providers = [
+                ('CUDAExecutionProvider', provider_options['CUDAExecutionProvider']),
+                'CPUExecutionProvider'
+            ]
+            print("\nGPU Configuration:")
+            print(f"Provider options: {provider_options}")
         else:
             ort_providers.append('CPUExecutionProvider')
+            print("\nWarning: Running in CPU-only mode")
             
         # Don't override CUDA_VISIBLE_DEVICES here as it may interfere with GPU detection
         
@@ -222,12 +246,23 @@ def load_into_chromadb(files):
     except Exception as e:
         print(f"Error deleting collection: {str(e)}")
         
-    # Create collection with configured embedding function
+    # Create collection with configured embedding function and optimized settings
     collection = client.create_collection(
         name="gmlogger_data",
-        metadata={"description": "Processed DLT log data"},
+        metadata={
+            "description": "Processed DLT log data",
+            "hnsw:construction_ef": 100,  # Optimize for GPU memory access patterns
+            "hnsw:search_ef": 100,
+            "hnsw:M": 16
+        },
         embedding_function=embedding_function
     )
+    
+    # Monitor GPU memory usage if available
+    if torch.cuda.is_available():
+        print("\nInitial GPU Memory Usage:")
+        print(f"Allocated: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MB")
+        print(f"Reserved:  {torch.cuda.memory_reserved(0) / 1024**2:.2f} MB")
     
     print("Loading files into ChromaDB...")
     for file_idx, file in enumerate(files):
